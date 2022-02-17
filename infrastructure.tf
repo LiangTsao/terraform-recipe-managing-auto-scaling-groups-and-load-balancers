@@ -1,29 +1,35 @@
+
+provider aws {
+     # profile="default"
+     region = "cn-northwest-1" 
+}
+
 resource "aws_vpc" "my_vpc" {
   cidr_block       = "10.0.0.0/16"
   enable_dns_hostnames = true
 
   tags = {
-    Name = "My VPC"
+    Name = "caoliang_My VPC"
   }
 }
 
-resource "aws_subnet" "public_us_east_1a" {
+resource "aws_subnet" "public_cn_northwest_1a" {
   vpc_id     = aws_vpc.my_vpc.id
   cidr_block = "10.0.0.0/24"
-  availability_zone = "us-east-1a"
+  availability_zone = "cn-northwest-1a"
 
   tags = {
-    Name = "Public Subnet us-east-1a"
+    Name = "caoliang_Public Subnet us-east-1a"
   }
 }
 
-resource "aws_subnet" "public_us_east_1b" {
+resource "aws_subnet" "public_cn_northwest_1b" {
   vpc_id     = aws_vpc.my_vpc.id
   cidr_block = "10.0.1.0/24"
-  availability_zone = "us-east-1b"
+  availability_zone = "cn-northwest-1b"
 
   tags = {
-    Name = "Public Subnet us-east-1b"
+    Name = "caoliang_Public Subnet us-east-1b"
   }
 }
 
@@ -31,7 +37,7 @@ resource "aws_internet_gateway" "my_vpc_igw" {
   vpc_id = aws_vpc.my_vpc.id
 
   tags = {
-    Name = "My VPC - Internet Gateway"
+    Name = "caoliang_My VPC - Internet Gateway"
   }
 }
 
@@ -44,17 +50,17 @@ resource "aws_route_table" "my_vpc_public" {
     }
 
     tags = {
-        Name = "Public Subnets Route Table for My VPC"
+        Name = "caoliang_Public Subnets Route Table for My VPC"
     }
 }
 
 resource "aws_route_table_association" "my_vpc_us_east_1a_public" {
-    subnet_id = aws_subnet.public_us_east_1a.id
+    subnet_id = aws_subnet.public_cn_northwest_1a.id
     route_table_id = aws_route_table.my_vpc_public.id
 }
 
 resource "aws_route_table_association" "my_vpc_us_east_1b_public" {
-    subnet_id = aws_subnet.public_us_east_1b.id
+    subnet_id = aws_subnet.public_cn_northwest_1b.id
     route_table_id = aws_route_table.my_vpc_public.id
 }
 
@@ -78,27 +84,30 @@ resource "aws_security_group" "allow_http" {
   }
 
   tags = {
-    Name = "Allow HTTP Security Group"
+    Name = "caoliang_Allow HTTP Security Group"
   }
 }
 
 resource "aws_launch_configuration" "web" {
   name_prefix = "web-"
 
-  image_id = "ami-0947d2ba12ee1ff75" # Amazon Linux 2 AMI (HVM), SSD Volume Type
+# ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-20211001
+# ami-01fac9af96c6500a9
+
+  image_id = "ami-01fac9af96c6500a9" 
   instance_type = "t2.micro"
-  key_name = "Lenovo T410"
+  key_name = "liang_RSA"
 
   security_groups = [ aws_security_group.allow_http.id ]
   associate_public_ip_address = true
 
   user_data = <<USER_DATA
 #!/bin/bash
-yum update
-yum -y install nginx
+apt-get update
+apt-get install -y nginx
 echo "$(curl http://169.254.169.254/latest/meta-data/local-ipv4)" > /usr/share/nginx/html/index.html
-chkconfig nginx on
-service nginx start
+systemctl enable nginx
+systemctl start nginx
   USER_DATA
 
   lifecycle {
@@ -126,7 +135,7 @@ resource "aws_security_group" "elb_http" {
   }
 
   tags = {
-    Name = "Allow HTTP through ELB Security Group"
+    Name = "caoliang_Allow HTTP through ELB Security Group"
   }
 }
 
@@ -136,8 +145,8 @@ resource "aws_elb" "web_elb" {
     aws_security_group.elb_http.id
   ]
   subnets = [
-    aws_subnet.public_us_east_1a.id,
-    aws_subnet.public_us_east_1b.id
+    aws_subnet.public_cn_northwest_1a.id,
+    aws_subnet.public_cn_northwest_1b.id
   ]
 
   cross_zone_load_balancing   = true
@@ -184,8 +193,8 @@ resource "aws_autoscaling_group" "web" {
   metrics_granularity = "1Minute"
 
   vpc_zone_identifier  = [
-    aws_subnet.public_us_east_1a.id,
-    aws_subnet.public_us_east_1b.id
+    aws_subnet.public_cn_northwest_1a.id,
+    aws_subnet.public_cn_northwest_1b.id
   ]
 
   # Required to redeploy without an outage.
@@ -195,7 +204,7 @@ resource "aws_autoscaling_group" "web" {
 
   tag {
     key                 = "Name"
-    value               = "web"
+    value               = "caoliang_web"
     propagate_at_launch = true
   }
 
