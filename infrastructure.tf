@@ -1,5 +1,5 @@
 
-provider aws {
+provider "aws" {
      # profile="default"
      region = "cn-northwest-1" 
 }
